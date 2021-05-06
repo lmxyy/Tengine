@@ -36,11 +36,6 @@
 #include "device/cpu/cpu_graph.h"
 #include "device/cpu/cpu_module.h"
 
-#ifdef CONFIG_AUTH_DEVICE
-#include <sys/time.h>
-#include "auth.h"
-#endif
-
 
 static int run(struct node_ops* node_ops, struct exec_node* exec_node, struct exec_graph* exec_graph)
 {
@@ -61,11 +56,6 @@ static int run(struct node_ops* node_ops, struct exec_node* exec_node, struct ex
 
     struct deconv_param* deconv_param = ( struct deconv_param* )ir_node->op.param_mem;
 
-#ifdef CONFIG_AUTH_DEVICE
-    if (node_ops->skip_run)
-        return -1;
-#endif
-
     if (deconv_dw_run(input_tensor, weight_tensor, bias_tensor, output_tensor, deconv_param, num_thread, cpu_affinity) <
         0)
     {
@@ -73,20 +63,6 @@ static int run(struct node_ops* node_ops, struct exec_node* exec_node, struct ex
         set_tengine_errno(EFAULT);
         return -1;
     }
-
-#ifdef CONFIG_AUTH_DEVICE
-    if (node_ops->time_limited && (!(node_ops->run_count & IGNORE_AUTH_TIMES)))
-    {
-        struct timeval tv;
-        gettimeofday(&tv, NULL);
-
-        if ((tv.tv_sec - node_ops->tv_start) >= node_ops->time_limited)
-        {
-            node_ops->skip_run = true;
-        }
-    }
-    node_ops->run_count++;
-#endif
 
     return 0;
 }
@@ -135,16 +111,6 @@ static int score(struct node_ops* node_ops, struct exec_graph* exec_graph, struc
         return 0;
 }
 
-#ifdef CONFIG_AUTH_DEVICE
-static void InitTimeLimited(struct node_ops* node_ops)
-{
-    node_ops->time_limited = get_auth_time_limited();
-    node_ops->run_count = 0;
-    node_ops->skip_run = get_auth_skip_run();
-    node_ops->tv_start = get_auth_time_start();
-}
-#endif
-
 static struct node_ops hcl_node_ops = {.prerun = NULL,
                                        .run = run,
                                        .reshape = NULL,
@@ -152,18 +118,14 @@ static struct node_ops hcl_node_ops = {.prerun = NULL,
                                        .init_node = init_node,
                                        .release_node = release_node,
                                        .score = score
-#ifdef CONFIG_AUTH_DEVICE
-                                       ,
-                                       .InitTimeLimited = InitTimeLimited
-#endif
 };
 
-int register_deconv_dw_hcl_arm_op(void* arg)
+int register_deconv_dw_hcl_arm_op()
 {
     return register_builtin_node_ops(OP_DECONV, &hcl_node_ops);
 }
 
-int unregister_deconv_dw_hcl_arm_op(void* arg)
+int unregister_deconv_dw_hcl_arm_op()
 {
     unregister_builtin_node_ops(OP_DECONV, &hcl_node_ops);
     return 0;
