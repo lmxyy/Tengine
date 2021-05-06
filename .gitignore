@@ -53,3 +53,5 @@ build*/
 
 # 3rd
 3rdparty
+
+./models
