@@ -244,18 +244,14 @@ static struct node_ops hcl_node_ops = {
         .init_node = init_node,
         .release_node = release_node,
         .score = score
-#ifdef CONFIG_AUTH_DEVICE
-        ,
-                                       .InitTimeLimited = InitTimeLimited
-#endif
 };
 
-int register_conv_hcl_rv64_op(void* arg)
+int register_conv_hcl_rv64_op()
 {
     return register_builtin_node_ops(OP_CONV, &hcl_node_ops);
 }
 
-int unregister_conv_hcl_rv64_op(void* arg)
+int unregister_conv_hcl_rv64_op()
 {
     unregister_builtin_node_ops(OP_CONV, &hcl_node_ops);
     return 0;

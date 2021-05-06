@@ -26,7 +26,6 @@
 #include "fc_param.h"
 
 #include "fc_kernel_arm.h"
-#include "hybrid_fc_kernel_arm.h"
 #include "fc_kernel_int8_arm.h"
 
 #include "graph/tensor.h"
@@ -47,10 +46,6 @@
 #include "cortex_a/fc_kernel_fp16_arm82.h"
 #endif
 
-#ifdef CONFIG_AUTH_DEVICE
-#include <sys/time.h>
-#include "auth.h"
-#endif
 
 static int prerun(struct node_ops* node_ops, struct exec_node* exec_node, struct exec_graph* exec_graph)
 {
@@ -62,15 +57,6 @@ static int prerun(struct node_ops* node_ops, struct exec_node* exec_node, struct
 
     struct fc_priv_info* priv_info = ( struct fc_priv_info* )exec_node->ops_priv;
     struct fc_param* fc_param = ( struct fc_param* )ir_node->op.param_mem;
-
-#ifdef CONFIG_AUTH_DEVICE
-    node_ops->InitTimeLimited(node_ops);
-    bool float_enabled = get_auth_float_enabled();
-    if (!float_enabled)
-    {
-        return -1;
-    }
-#endif
 
     /* fp32 prerun */
     if (exec_graph->mode == TENGINE_MODE_FP32)
@@ -93,15 +79,6 @@ static int prerun(struct node_ops* node_ops, struct exec_node* exec_node, struct
         }
     }
 #endif
-    /* hybrid int8 prerun */
-    else if (exec_graph->mode == TENGINE_MODE_HYBRID_INT8)
-    {
-        if(hybrid_fc_kernel_prerun(input_tensor, filter_tensor, output_tensor, priv_info, fc_param) < 0)
-        {
-            TLOG_ERR("hcl hybrid int8 fc prerun failed\n");
-            return -1;
-        }
-    }
     else if(exec_graph->mode == TENGINE_MODE_INT8)
 	{
         if (int8_fc_kernel_prerun(input_tensor, filter_tensor, output_tensor, priv_info, fc_param) < 0)
@@ -140,11 +117,6 @@ static int run(struct node_ops* node_ops, struct exec_node* exec_node, struct ex
     struct fc_param* fc_param = ( struct fc_param* )ir_node->op.param_mem;
     struct fc_priv_info* priv_info = ( struct fc_priv_info* )exec_node->ops_priv;
 
-#ifdef CONFIG_AUTH_DEVICE
-    if (node_ops->skip_run)
-        return -1;
-#endif
-
     /* fp32 run */
     if (exec_graph->mode == TENGINE_MODE_FP32)
     {
@@ -167,15 +139,6 @@ static int run(struct node_ops* node_ops, struct exec_node* exec_node, struct ex
         }
     }
 #endif
-    /* hybrid int8 run */
-    else if (exec_graph->mode == TENGINE_MODE_HYBRID_INT8)
-    {
-        if (hybrid_fc_kernel_run(input_tensor, weight_tensor, bias_tensor, output_tensor, priv_info, fc_param, num_thread, cpu_affinity) < 0)
-        {
-            TLOG_ERR("hcl hybrid int8 fc run failed\n");
-            return -1;
-        }
-    }
     else if (exec_graph->mode == TENGINE_MODE_INT8) 
 	{
         if (int8_fc_kernel_run(input_tensor, weight_tensor, bias_tensor, output_tensor, priv_info,fc_param,num_thread,cpu_affinity) < 0)
@@ -189,20 +152,6 @@ static int run(struct node_ops* node_ops, struct exec_node* exec_node, struct ex
         TLOG_ERR("Tengine work node not support %d\n", exec_graph->mode);
         return -1;
     }
-
-#ifdef CONFIG_AUTH_DEVICE
-    if (node_ops->time_limited && (!(node_ops->run_count & IGNORE_AUTH_TIMES)))
-    {
-        struct timeval tv;
-        gettimeofday(&tv, NULL);
-
-        if ((tv.tv_sec - node_ops->tv_start) >= node_ops->time_limited)
-        {
-            node_ops->skip_run = true;
-        }
-    }
-    node_ops->run_count++;
-#endif    
 
     return 0;
 }
@@ -291,19 +240,6 @@ static int postrun(struct node_ops* node_ops, struct exec_node* exec_node, struc
             return -1;
         }
     }
-    /* hybrid int8 postrun */
-    else if (exec_graph->mode == TENGINE_MODE_HYBRID_INT8)
-    {
-        #if MACOS
-        TLOG_ERR("HYBRID not support under mac os");
-        #else
-        if (hybrid_fc_kernel_postrun(priv_info) < 0)
-        {
-            TLOG_ERR("hcl fc hybrid int8 postrun failed\n");
-            return -1;
-        }
-        #endif
-    }
     else
     {
         TLOG_ERR("Tengine work node not support %d\n", exec_graph->mode);
@@ -355,16 +291,6 @@ static int score(struct node_ops* node_ops, struct exec_graph* exec_graph, struc
     return OPS_SCORE_BEST;
 }
 
-#ifdef CONFIG_AUTH_DEVICE
-static void InitTimeLimited(struct node_ops* node_ops)
-{
-    node_ops->time_limited = get_auth_time_limited();
-    node_ops->run_count = 0;
-    node_ops->skip_run = get_auth_skip_run();
-    node_ops->tv_start = get_auth_time_start();
-}
-#endif
-
 static struct node_ops hcl_node_ops = {.prerun = prerun,
                                        .run = run,
                                        .reshape = reshape,
@@ -372,18 +298,14 @@ static struct node_ops hcl_node_ops = {.prerun = prerun,
                                        .init_node = init_node,
                                        .release_node = release_node,
                                        .score = score
-#ifdef CONFIG_AUTH_DEVICE
-                                       ,
-                                       .InitTimeLimited = InitTimeLimited
-#endif
 };
 
-int register_fc_hcl_arm_op(void* arg)
+int register_fc_hcl_arm_op()
 {
     return register_builtin_node_ops(OP_FC, &hcl_node_ops);
 }
 
-int unregister_fc_hcl_arm_op(void* arg)
+int unregister_fc_hcl_arm_op()
 {
     unregister_builtin_node_ops(OP_FC, &hcl_node_ops);
     return 0;
