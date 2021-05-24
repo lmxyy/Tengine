@@ -102,7 +102,7 @@ static int ref_deconv_fp32(const float* input, float* output, const float* kerne
     int kernel_offset = 0;
     int output_offset = 0;
 
-    memset((void*)output, 0, output_h * output_w * output_c * batch * group * sizeof(float));
+    memset(( void* )output, 0, (unsigned long)output_h * output_w * output_c * batch * group * sizeof(float));
 
     for (n = 0; n < batch; ++n)
     {
@@ -288,8 +288,13 @@ static int run(struct node_ops* node_ops, struct exec_node* exec_node, struct ex
     struct graph* ir_graph = ir_node->graph;
     struct tensor* i_tensor = get_ir_graph_tensor(ir_graph, ir_node->input_tensors[0]);
     struct tensor* weight_tensor = get_ir_graph_tensor(ir_graph, ir_node->input_tensors[1]);
-    struct tensor* bias_tensor = get_ir_graph_tensor(ir_graph, ir_node->input_tensors[2]);
+    struct tensor* bias_tensor = NULL;
     struct tensor* output_tensor = get_ir_graph_tensor(ir_graph, ir_node->output_tensors[0]);
+
+    if (ir_node->input_num > 2)	
+    {
+        bias_tensor = get_ir_graph_tensor(ir_graph, ir_node->input_tensors[2]);	
+    }
 
     void* output_data = output_tensor->data;
     const void* input_data = i_tensor->data;
@@ -304,10 +309,7 @@ static int run(struct node_ops* node_ops, struct exec_node* exec_node, struct ex
     /* input quant param */
     int ret = ref_deconv_fp32(input_data, output_data, kernel, bias, op_param);
 
-    if (ret < 0)
-        return -1;
-
-    return 0;
+    return ret;
 }
 
 static int reshape(struct node_ops* node_ops, struct exec_node* exec_node, struct exec_graph* exec_graph)

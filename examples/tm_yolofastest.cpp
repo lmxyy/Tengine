@@ -454,7 +454,7 @@ static void run_yolo(graph_t graph, std::vector<BBoxRect> &boxes, int img_width,
     bool letterbox = false;
     float roi_left = 0.f, roi_top = 0.f, roi_width = 1.f, roi_height = 1.f;
 
-    if (true == letterbox)
+    if (letterbox)
     {
         if (img_width > img_height)
         {
@@ -565,7 +565,6 @@ int main(int argc, char* argv[])
     if (graph == nullptr)
     {
         fprintf(stderr, "Create graph failed.\n");
-        fprintf(stderr, "errno: %d \n", get_tengine_errno());
         return -1;
     }
 

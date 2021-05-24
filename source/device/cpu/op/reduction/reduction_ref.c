@@ -58,11 +58,9 @@ static int run(struct node_ops* node_ops, struct exec_node* exec_node, struct ex
 {
     struct node* ir_node = exec_node->ir_node;
     struct graph* ir_graph = ir_node->graph;
-    struct tensor* input_tensor;
-    struct tensor* output_tensor;
+    struct tensor* input_tensor = get_ir_graph_tensor(ir_graph, ir_node->input_tensors[0]);
+    struct tensor* output_tensor = get_ir_graph_tensor(ir_graph, ir_node->output_tensors[0]);
 
-    input_tensor = get_ir_graph_tensor(ir_graph, ir_node->input_tensors[0]);
-    output_tensor = get_ir_graph_tensor(ir_graph, ir_node->output_tensors[0]);
     struct reduction_param* reduction_param = ( struct reduction_param* )ir_node->op.param_mem;
     struct reduce_param_ref param;
     int out_tensor_size = 1;
@@ -72,8 +70,8 @@ static int run(struct node_ops* node_ops, struct exec_node* exec_node, struct ex
     }
     int element_size = output_tensor->elem_size;
 
-    int dims[4] = {1, 1, 1, 1};
-
+    // int dims[4] = {1, 1, 1, 1};
+    int* dims = (int*)malloc(input_tensor->dim_num*sizeof(int));
     for (int i = 0; i < input_tensor->dim_num; i++)
     {
         dims[i] = input_tensor->dims[i];
@@ -88,13 +86,13 @@ static int run(struct node_ops* node_ops, struct exec_node* exec_node, struct ex
     param.param_dim[2] = reduction_param->dim_2;
     param.param_dim[3] = reduction_param->dim_3;
     param.type = reduction_param->type;
-
+    int in_dim_num = input_tensor->dim_num;
+    // printf("input dims: %d \n", input_tensor->dim_num);
     int ret = ref_reduce_fp32(( float* )input_tensor->data, ( float* )output_tensor->data, dim0, dim1, dim2, dim3,
-                              out_tensor_size, &param);
-    if (ret < 0)
-        return -1;
-    else
-        return 0;
+                              out_tensor_size, &param, in_dim_num, dims);
+    free(dims);
+
+    return ret;
 }
 
 static int score(struct node_ops* node_ops, struct exec_graph* exec_graph, struct node* exec_node)

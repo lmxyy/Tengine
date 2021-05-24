@@ -83,7 +83,7 @@ void VXEngine::VXTensorMap(struct graph* ir_graph, int ir_tensor_idx, int spec_t
                 datatype = tim::vx::DataType::INT32;
                 break;
             default:
-                TLOG_ERR("Tengine: TIM-VX is not supported date type(%d).\n",ir_tensor->data_type);
+                TLOG_ERR("Tensor: Tensor_name(%s) tensor_index(%d) tensor_data_type(%d) .\n",ir_tensor->name, ir_tensor->index, ir_tensor->data_type);
                 break;
         }
 
@@ -229,6 +229,12 @@ int VXEngine::Build(struct subgraph* subgraph)
                 break;
             case OP_RESHAPE:
                 this->AddReshapeNode(ir_node);
+                break;
+            case OP_RESIZE:
+                this->AddResizeNode(ir_node);
+                break;
+            case OP_SCALE:
+                this->AddScaleNode(ir_node);
                 break;
             case OP_SIGMOID:
                 this->AddSigmoidNode(ir_node);

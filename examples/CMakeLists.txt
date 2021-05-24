@@ -33,7 +33,14 @@ FUNCTION (TENGINE_EXAMPLE name file)
     TARGET_INCLUDE_DIRECTORIES (${name} PRIVATE "${CMAKE_CURRENT_BINARY_DIR}")
     TARGET_INCLUDE_DIRECTORIES (${name} PRIVATE "${PROJECT_SOURCE_DIR}/examples/common")
 
-    TARGET_LINK_LIBRARIES (${name} PRIVATE ${CMAKE_PROJECT_NAME} m)
+    TARGET_LINK_LIBRARIES (${name} PRIVATE ${CMAKE_PROJECT_NAME})
+
+    IF(MSVC)
+        TARGET_COMPILE_DEFINITIONS (${name} PRIVATE $<$<OR:$<COMPILE_LANGUAGE:C>,$<COMPILE_LANGUAGE:CXX>>:NOMINMAX>)
+    ELSE()
+        TARGET_LINK_LIBRARIES (${name} PRIVATE m)
+    ENDIF()
+
     INSTALL (TARGETS ${name} DESTINATION bin)
 ENDFUNCTION()
 
@@ -99,6 +106,7 @@ IF (OpenCV_FOUND AND ${TENGINE_TARGET_PROCESSOR} MATCHES "X86")
     TENGINE_EXAMPLE_CV (tm_yolov4_tiny_timvx     tm_yolov4_tiny_timvx.cpp)
     TENGINE_EXAMPLE_CV (tm_yolov5s               tm_yolov5s.cpp)
     TENGINE_EXAMPLE_CV (tm_yolov5s_timvx         tm_yolov5s_timvx.cpp)
+    TENGINE_EXAMPLE_CV (tm_unet                  tm_unet.cpp)
 ELSE()
     MESSAGE (WARNING "OpenCV not found, some examples won't be built")
 ENDIF()

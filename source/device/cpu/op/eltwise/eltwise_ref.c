@@ -211,15 +211,15 @@ static int ref_eltwise_fp32(void* output, void* input0, void* input1, int type, 
         case ELT_POW:
             if(input_count4 == 1){
                 for(int i = 0; i < input1_count4; i++){
-                    *out_ptr++ = pow(in0[0], in1[i]);
+                    *out_ptr++ = powf(in0[0], in1[i]);
                 }
             } else if (input1_count4 == 1){
                 for(int i = 0; i < input1_count4; i++){
-                    *out_ptr++ = pow(in0[0], in1[i]);
+                    *out_ptr++ = powf(in0[0], in1[i]);
                 }
             } else if (input_count4 == input1_count4){
                 for(int i = 0; i < input_count4; i++){
-                    *out_ptr++ = pow(in0[i], in1[i]);
+                    *out_ptr++ = powf(in0[i], in1[i]);
                 }
             } else {
                 TLOG_ERR("Case not support \n");
@@ -227,7 +227,7 @@ static int ref_eltwise_fp32(void* output, void* input0, void* input1, int type, 
             break;
         case ELT_POWER:
             for(int i = 0; i < input_count4; i++){
-                *out_ptr++ = pow((eltwise_param->shift + eltwise_param->scale * in0[i]), eltwise_param->power);
+                *out_ptr++ = powf((eltwise_param->shift + eltwise_param->scale * in0[i]), eltwise_param->power);
             }
             break;
         case ELT_LOG:
@@ -768,7 +768,8 @@ static int run(struct node_ops* node_ops, struct exec_node* exec_node, struct ex
         input_tensor1 = get_ir_graph_tensor(ir_graph, ir_node->input_tensors[1]);
         input1 = input_tensor1->data;
         input1_count4 = input_tensor1->elem_num;
-        input_hw_1 = input_tensor1->dims[2]*input_tensor1->dims[3];
+        int dim1_size = input_tensor1->dim_num;
+        input_hw_1 = input_tensor1->dims[dim1_size-2]*input_tensor1->dims[dim1_size-1];
     }
 
     if (!input_tensor1 || input_tensor0->elem_num >= input_tensor1->elem_num)
@@ -776,11 +777,14 @@ static int run(struct node_ops* node_ops, struct exec_node* exec_node, struct ex
         int input_chan_0 = 0;
         int input_hw_0 = 0;
         int input0_count4 = input_tensor0->elem_num;
-
+        int dim0_size = input_tensor0->dim_num;
         if (layout == TENGINE_LAYOUT_NCHW)
         {
-            input_chan_0 = input_tensor0->dims[1];
-            input_hw_0 = input_tensor0->dims[2] * input_tensor0->dims[3];
+            input_chan_0 = input_tensor0->dims[dim0_size-3];
+            if(input_tensor0->dims[dim0_size-4]){
+                input_chan_0 *= input_tensor0->dims[dim0_size-4];
+            }
+            input_hw_0 = input_tensor0->dims[dim0_size-2] * input_tensor0->dims[dim0_size-1];
         }
         else if (layout == TENGINE_LAYOUT_NHWC)
         {
@@ -792,7 +796,6 @@ static int run(struct node_ops* node_ops, struct exec_node* exec_node, struct ex
             TLOG_ERR("unknown graph layout: %d\n", ir_graph->graph_layout);
             return -1;
         }
-
         int ret = -1;
         if (input_tensor0->data_type == TENGINE_DT_FP32)
             ret = ref_eltwise_fp32(output, input0, input1, eltwise_param->type, input0_count4, input_chan_0, input_hw_0,

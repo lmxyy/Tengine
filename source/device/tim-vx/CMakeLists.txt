@@ -37,7 +37,15 @@ ENDIF()
 
 # 2. check arch
 IF (${TENGINE_TARGET_PROCESSOR} MATCHES "ARM")
-    SET (_VX_ARCH "aarch64")
+    IF (ANDROID)
+        SET (_VX_ARCH "android")
+    ELSE()
+        IF (TENGINE_TARGET_PROCESSOR_32Bit)
+            SET (_VX_ARCH "aarch32")
+        ELSE()
+            SET (_VX_ARCH "aarch64")
+        ENDIF()
+    ENDIF()
 ELSEIF (${TENGINE_TARGET_PROCESSOR} MATCHES "X86")
     SET (_VX_ARCH "x86_64")
 ELSE()
@@ -112,21 +120,35 @@ IF (TENGINE_ENABLE_TIM_VX_INTEGRATION)
 
     TARGET_LINK_DIRECTORIES    (${_TIM_OVX_NAME} PUBLIC ${CMAKE_SOURCE_DIR}/3rdparty/tim-vx/lib/${_VX_ARCH})
 
-    TARGET_LINK_LIBRARIES      (${_TIM_OVX_NAME} PRIVATE CLC GAL OpenVX OpenVXU VSC ArchModelSw NNArchPerf)
+    IF (ANDROID)
+        TARGET_LINK_LIBRARIES   (${_TIM_OVX_NAME} PRIVATE CLC GAL OpenVX OpenVXU VSC archmodelSw NNArchPerf)
+    ELSE()
+        TARGET_LINK_LIBRARIES   (${_TIM_OVX_NAME} PRIVATE CLC GAL OpenVX OpenVXU VSC ArchModelSw NNArchPerf)
+    ENDIF()
 
     TARGET_COMPILE_DEFINITIONS (${_TIM_OVX_NAME} PRIVATE "-DOVXLIB_API=${_VX_OVX_API_ATTR}")
 
     TARGET_COMPILE_OPTIONS     (${_TIM_OVX_NAME} PRIVATE $<$<OR:$<COMPILE_LANGUAGE:C>,$<COMPILE_LANGUAGE:CXX>>:-fPIC>)
 
-    # for TIM-VX
-    AUX_SOURCE_DIRECTORY (${_VX_ROOT}/tim/vx                    _VX_BASE_SRC)
-    AUX_SOURCE_DIRECTORY (${_VX_ROOT}/tim/vx/ops                _VX_OPS_SRC)
+    # collect tim-vx test files
+    FILE (GLOB _VX_BASE_REMOVE_SRC ${_VX_ROOT}/tim/vx/*_test.cc)
+    FILE (GLOB _VX_OPS_REMOVE_SRC  ${_VX_ROOT}/tim/vx/ops/*_test.cc)
+
+    # remove test files for tim-vx
+    IF(_VX_BASE_REMOVE_SRC)
+        FILE (REMOVE ${_VX_BASE_REMOVE_SRC})
+    ENDIF()
+    IF(_VX_OPS_REMOVE_SRC)
+        FILE (REMOVE ${_VX_OPS_REMOVE_SRC})
+    ENDIF()
+
+    # collect all source files for tim-vx
+    AUX_SOURCE_DIRECTORY (${_VX_ROOT}/tim/vx      _VX_BASE_SRC)
+    AUX_SOURCE_DIRECTORY (${_VX_ROOT}/tim/vx/ops  _VX_OPS_SRC)
 
     # TIM-VX source
     SET (_VX_SRC)
     LIST (APPEND      _VX_SRC ${_VX_BASE_SRC} ${_VX_OPS_SRC})
-    LIST (REMOVE_ITEM _VX_SRC ${_VX_ROOT}/tim/vx/context_test.cc)
-    LIST (REMOVE_ITEM _VX_SRC ${_VX_ROOT}/tim/vx/graph_test.cc)
 
     # build
     ADD_LIBRARY (${_TIM_VX_NAME} STATIC ${_VX_SRC})
@@ -152,7 +174,11 @@ IF (TENGINE_ENABLE_TIM_VX_INTEGRATION)
     TARGET_LINK_DIRECTORIES (${_TIM_VX_NAME} PUBLIC ${CMAKE_SOURCE_DIR}/3rdparty/tim-vx/lib/${_VX_ARCH})
 
     TARGET_LINK_LIBRARIES   (${_TIM_VX_NAME} PRIVATE ${_TIM_OVX_NAME})
-    TARGET_LINK_LIBRARIES   (${_TIM_VX_NAME} PRIVATE CLC GAL OpenVX OpenVXU VSC ArchModelSw NNArchPerf)
+    IF (ANDROID)
+        TARGET_LINK_LIBRARIES   (${_TIM_VX_NAME} PRIVATE CLC GAL OpenVX OpenVXU VSC archmodelSw NNArchPerf)
+    ELSE()
+        TARGET_LINK_LIBRARIES   (${_TIM_VX_NAME} PRIVATE CLC GAL OpenVX OpenVXU VSC ArchModelSw NNArchPerf)
+    ENDIF()
 ENDIF()
 
 

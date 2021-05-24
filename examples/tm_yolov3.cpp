@@ -160,7 +160,7 @@ layer make_darknet_layer(int batch, int w, int h, int net_w, int net_h, int n, i
     }
     l.layer_type = layer_type;
     l.outputs = l.inputs;
-    l.output = ( float* )calloc(batch * l.outputs, sizeof(float));
+    l.output = ( float* )calloc((size_t)batch * l.outputs, sizeof(float));
 
     return l;
 }
@@ -714,7 +714,6 @@ int main(int argc, char* argv[])
     if (graph == nullptr)
     {
         fprintf(stderr, "Create graph failed.\n");
-        fprintf(stderr, "errno: %d \n", get_tengine_errno());
         return -1;
     }
 

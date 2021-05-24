@@ -127,7 +127,7 @@ static void convdw3x3s1(float* output, float* img_data, float* kernel_data, floa
     int channel_count = inc >> 3;
     int channel_remain = inc - (channel_count << 3);
     // generate the image tmp
-    float* img_tmp = ( float* )sys_malloc(8 * inwh * (channel_count + 1) * sizeof(float));
+    float* img_tmp = ( float* )sys_malloc(8 * (unsigned long)inwh * (channel_count + 1) * sizeof(float));
     float* kernel_tmp = ( float* )sys_malloc(8 * 9 * (channel_count + 1) * sizeof(float));
     float* bias_tmp = ( float* )sys_malloc(8 * (channel_count + 1) * sizeof(float));
     {
@@ -334,7 +334,7 @@ static void convdw3x3s1(float* output, float* img_data, float* kernel_data, floa
         }
     }
 
-    float* output_tmp = ( float* )sys_malloc(outwh * (channel_count + 1) * 8 * sizeof(float));
+    float* output_tmp = ( float* )sys_malloc((unsigned long)outwh * (channel_count + 1) * 8 * sizeof(float));
     for (int c = 0; c < channel_count + 1; c++)
     {
         float* ktmp = kernel_tmp + c * 8 * 9;
@@ -783,7 +783,7 @@ static void convdw3x3s2(float* output, float* img_data, float* kernel_data, floa
     int channel_count = inc >> 3;
     int channel_remain = inc - (channel_count << 3);
     // generate the image tmp
-    float* img_tmp = ( float* )sys_malloc(8 * inwh * (channel_count + 1) * sizeof(float));
+    float* img_tmp = ( float* )sys_malloc(8 * (unsigned long)inwh * (channel_count + 1) * sizeof(float));
     float* kernel_tmp = ( float* )sys_malloc(8 * 9 * (channel_count + 1) * sizeof(float));
     float* bias_tmp = ( float* )sys_malloc(8 * (channel_count + 1) * sizeof(float));
     {
@@ -993,7 +993,7 @@ static void convdw3x3s2(float* output, float* img_data, float* kernel_data, floa
         }
     }
 
-    float* output_tmp = ( float* )sys_malloc(outwh * (channel_count + 1) * 8 * sizeof(float));
+    float* output_tmp = ( float* )sys_malloc((unsigned long)outwh * (channel_count + 1) * 8 * sizeof(float));
     for (int c = 0; c < channel_count + 1; c++)
     {
         float* ktmp = kernel_tmp + c * 8 * 9;
@@ -2565,7 +2565,7 @@ int conv_dw_run(struct tensor* input_tensor, struct tensor* weight_tensor, struc
         input_tmp = input;
     else
     {
-        input_tmp = ( float* )sys_malloc(inh_tmp * inw_tmp * group * sizeof(float));
+        input_tmp = ( float* )sys_malloc((size_t)inh_tmp * inw_tmp * group * sizeof(float));
 #pragma omp parallel for num_threads(num_thread)        
         for (int g = 0; g < group; g++)
         {
